@@ -16,12 +16,12 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 ## Features
 
 - Smart battery scheduling based on dynamic energy prices
-- Minimize electricity costs and maximize self-consumption
+- Minimize electricity costs
 - Consider battery constraints:
   - Capacity limits
   - Charge/discharge power limits
-- Penalizes frequent on/off switching
-- Optional support for PV generation
+- Can penalize frequent on/off switching
+- Support for PV generation
 - Built using Google OR-Tools
 
 ---
