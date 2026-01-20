@@ -5,7 +5,7 @@ from solver import solve_solar
 import numpy as np
 import re
 
-interval = list(range(96*2))
+interval = list(range(96))
 
 def readData(filename, length):
     with open(filename) as f:
@@ -130,6 +130,7 @@ if not soc_optimiert:
     exit()
 
 
+
 #draw plots
 energyConsumption_plot = [abs(x) * 1000 for x in energyConsumption]
 values_kosten_plot = [x * 50 for x in values_kosten]
@@ -212,9 +213,9 @@ bottom_bar = np.array(bezug_bestehend_1000) + np.array(discharge_bestehend)
 ax1.bar(x, solar_energy_list, alpha=0.4, color='orange',
         label='Solar Produktion', bottom=bottom_bar)
 
-ax2 = ax1.twinx()
-ax2.plot(x, values_kosten, linestyle=':', marker='s',
-         color='black', label='Preis Netzstrom')
+#ax2 = ax1.twinx()
+#ax2.plot(x, values_kosten, linestyle=':', marker='s',
+#         color='black', label='Preis Netzstrom')
 
 lines1, labels1 = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
@@ -224,6 +225,31 @@ ax1.set_title("Verbrauch & Preis (bestehend)")
 ax1.set_ylabel("Energie (Wh)")
 ax1.grid(True)
 
-plt.tight_layout()
+total = sum((e + s) * -k for e, s, k in zip(energyConsumption, values_pv, values_kosten))
+total_bestehend = sum(e * k for e, k in zip(bezug_bestehend, values_kosten))
+total_optimized = sum(e * k for e, k in zip(energy_bought_list, values_kosten))
+
+energyBrought = sum((e + s) *-1 for e, s in zip(energyConsumption, values_pv))
+energyBrought_bestehend = sum(e for e in bezug_bestehend)
+energyBrought_optimized = sum(e/1000 for e in energy_bought_list)
+
+description = (
+    "Optimization results:\n"
+    f"The costs were assumed to be {total:.1f} buying directly, in the current optimization the cost would be reduced to {total_bestehend:.1f}\n"
+    f"Further optimization could bring this to {total_optimized / 1000:.1f}.\n"
+    f"The system would need {energyBrought} kWh, the current version would buy {energyBrought_bestehend} and the optimizer would buy {energyBrought_optimized}\n"
+)
+
+fig.text(
+    0.5,        # horizontal zentriert
+    0.04,      # unterhalb der Subplots
+    description,
+    ha='center',
+    va='top',
+    fontsize=20,
+    wrap=True
+)
+
+plt.tight_layout(rect=[0, 0.08, 1, 1])
 #plt.show()
-plt.savefig(folderName+"\\" + folderName + ".png", dpi=300)
+plt.savefig(folderName+"\\" + folderName + ".png", dpi=300, bbox_inches='tight')
