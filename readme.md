@@ -1,27 +1,27 @@
 # Battery Optimization with Dynamic Energy Pricing
 
 This project implements an optimization model for battery charging and discharging using dynamic electricity prices.  
-It schedules battery usage to minimize energy costs, avoid unnecessary switching, and respect battery constraints.
+It schedules battery usage to minimize energy costs, can avoid switching, and respect battery constraints.
 
 ---
 
 ## Project Structure
 
-- `solver.py` – OR-Tools solver using `pywraplp.Solver.CreateSolver("CBC")` or `"SCIP"`  
-- `Solar.py` – Main script to run the optimization  
-- `example.py` – Example dataset and usage for testing
+- `solver.py` â€“ OR-Tools solver using `pywraplp.Solver.CreateSolver("CBC")` or `"SCIP"`  
+- `Solar.py` â€“ Main script to run the optimization  
+- `example.py` â€“ Example dataset and usage for testing
 
 ---
 
 ## Features
 
 - Smart battery scheduling based on dynamic energy prices
-- Minimize electricity costs and maximize self-consumption
+- Minimize electricity costs
 - Consider battery constraints:
   - Capacity limits
   - Charge/discharge power limits
-- Penalizes frequent on/off switching
-- Optional support for PV generation
+- Can penalize frequent on/off switching
+- Support for PV generation
 - Built using Google OR-Tools
 
 ---
