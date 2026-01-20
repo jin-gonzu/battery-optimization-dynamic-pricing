@@ -40,7 +40,9 @@ def solve_solar(interval,
     #discharge and charge cannot happen at the same time
     for i in interval:
         solver.Add(battery_charge[i] <= battery_charge_power * is_charging[i])
+        solver.Add(battery_charge[i] >= battery_charge_power * is_charging[i])
         solver.Add(solar_to_battery[i] <= battery_charge_power * is_charging[i])
+        solver.Add(battery_charge_power >= solar_to_battery[i] + battery_charge[i])
         solver.Add(battery_discharge[i] <= battery_discharge_power * (1 - is_charging[i]))    
     
     #constraint for bool variable dischargeAllowed
@@ -58,21 +60,21 @@ def solve_solar(interval,
 
     #calculation of battery status, history, start and end
     solver.Add(battery_status[0] == battery_initial_capacity + battery_charge[0] - battery_discharge[0] + solar_to_battery[0])
-    solver.Add(battery_status[interval[-1]] == battery_target_capacity)
+    #solver.Add(battery_status[interval[-1]] == battery_target_capacity)
     for i in range(1, len(interval)):
         solver.Add(battery_status[i] == battery_status[i-1] + battery_charge[i] - battery_discharge[i] + solar_to_battery[i])
 
     #initialEnergyLeft
-    #solver.Add(initial_energy_left[0] == battery_initial_capacity)
-    #for i in interval:
-    #    solver.Add(initial_energy_left[i] <= battery_status[i])
-    #    
-    #for i in interval:
-    #    solver.Add(
-    #        initial_energy_left[i]
-    #        >= battery_initial_capacity
-    #        - sum(battery_discharge[j] for j in interval if j <= i)
-    #    )
+    solver.Add(initial_energy_left[0] == battery_initial_capacity)
+    for i in interval:
+        solver.Add(initial_energy_left[i] <= battery_status[i])
+        
+    for i in interval:
+        solver.Add(
+            initial_energy_left[i]
+            >= battery_initial_capacity
+            - sum(battery_discharge[j] for j in interval if j <= i)
+        )
     
     for i in interval:
         solver.Add(
@@ -96,13 +98,18 @@ def solve_solar(interval,
         solver.Add(switch[i] >= is_charging[i] - is_charging[i-1])
         solver.Add(switch[i] >= is_charging[i-1] - is_charging[i])
 
+    end_charge_bonus = solver.NumVar(-solver.infinity(), solver.infinity(), "end_charge_bonus")
+    solver.Add(end_charge_bonus == battery_status[interval[-1]] - battery_status[interval[0]])
+
     objective = solver.Objective()
     for i in interval:
         objective.SetCoefficient(outside_power[i], price_outside_power[i])
         objective.SetCoefficient(selling[i], -price_selling_energy)
-        if(i > 0):
-            objective.SetCoefficient(switch[i], 5000000)
-        #objective.SetCoefficient(initial_energy_left[interval[-1]],price_using_battery)
+        objective.SetCoefficient(initial_energy_left[interval[-1]],price_using_battery)
+        #objective.SetCoefficient(battery_status[interval[-1]]-battery_status[0],-price_using_battery)
+        objective.SetCoefficient(end_charge_bonus, -price_using_battery)
+        #if(i > 0):
+        #    objective.SetCoefficient(switch[i], 5000000)
 
     objective.SetMinimization()
 
@@ -117,9 +124,6 @@ def solve_solar(interval,
     if status != pywraplp.Solver.OPTIMAL:
         print("Keine optimale Lösung gefunden")
         return soc_list, energy_bought_list, battery_discharge_list,battery_charge_list, solar_energy_list
-
-    print("Der optimierte Strompreis liegt bei: ", objective.Value() / 1000 / 100)
-    print()
 
     # Header mit Tabs
     print(
