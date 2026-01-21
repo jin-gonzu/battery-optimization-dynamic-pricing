@@ -7,6 +7,35 @@ import re
 
 interval = list(range(96))
 
+def group_commands(commands):
+    grouped_commands = []
+    sorted_intervals = sorted(commands.keys())
+
+    if not sorted_intervals:
+        return grouped_commands
+
+    current_cmd = commands[sorted_intervals[0]]
+    start = sorted_intervals[0]
+
+    for i in sorted_intervals[1:]:
+        if commands[i] != current_cmd:
+            grouped_commands.append({
+                'cmd': current_cmd,
+                'p1': start,
+                'p2': i - 1
+            })
+            current_cmd = commands[i]
+            start = i
+
+    # letztes Intervall hinzufügen
+    grouped_commands.append({
+        'cmd': current_cmd,
+        'p1': start,
+        'p2': sorted_intervals[-1]
+    })
+
+    return grouped_commands
+
 def readData(filename, length):
     with open(filename) as f:
         data = [float(x) for line in f for x in line.strip().split()[2:]]
@@ -42,7 +71,7 @@ def read_battery_file(filename):
     return battery_soc_initial, soc_bestehend, bezug_bestehend
 
 # Beispielaufruf
-folderName = "19.20.01"
+folderName = "21.01"
 battery_soc_initial, soc_bestehend, bezug_bestehend = read_battery_file(folderName+"/log.log")
 
 print("Initial SOC:", battery_soc_initial)
@@ -56,7 +85,7 @@ values_pv = readData(folderName+"/pv.log", len(interval))
 #battery_soc_initial = 70;
 battery_soc_target = 35;
 
-battery_soc_minimum_allowed = 35
+battery_soc_minimum_allowed = 20
 
 battery_max_capacity=28800
 battery_initial_capacity = int(battery_soc_initial * battery_max_capacity / 100)
@@ -98,7 +127,7 @@ price_outside_power = {i: int(v * 100) for i, v in zip(interval, values_kosten)}
 solar_production = {i: int(v * 1000) for i, v in zip(interval, values_pv)}
 
 
-soc_optimiert, energy_bought_list, battery_discharge_list, battery_charge_list, solar_energy_list = solve_solar(
+soc_optimiert, energy_bought_list, battery_discharge_list, battery_charge_list, solar_energy_list, is_charging_list, is_discharging_list, outside_to_battery_list,solar_to_battery_list = solve_solar(
     interval=interval,
     consumption=consumption,
     price_outside_power=price_outside_power,
@@ -128,7 +157,6 @@ print(f"Es werden geplant, dass {sum(energyConsumption)} kWh verbraucht werden,\
 
 if not soc_optimiert:
     exit()
-
 
 
 #draw plots
@@ -184,13 +212,9 @@ bottom_bar = np.array(energy_bought_list) + np.array(battery_discharge_list)
 ax1.bar(x, solar_energy_list, alpha=0.4, color='orange',
         label='Solar Produktion', bottom=bottom_bar)
 
-#ax2 = ax1.twinx()
-#ax2.plot(x, values_kosten, linestyle=':', marker='s',
-#         color='black', label='Preis Netzstrom')
 
 lines1, labels1 = ax1.get_legend_handles_labels()
-lines2, labels2 = ax2.get_legend_handles_labels()
-ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+ax1.legend(lines1, labels1, loc='upper left')
 
 ax1.set_title("Verbrauch & Preis (optimiert)")
 ax1.set_ylabel("Energie (Wh)")
@@ -213,13 +237,8 @@ bottom_bar = np.array(bezug_bestehend_1000) + np.array(discharge_bestehend)
 ax1.bar(x, solar_energy_list, alpha=0.4, color='orange',
         label='Solar Produktion', bottom=bottom_bar)
 
-#ax2 = ax1.twinx()
-#ax2.plot(x, values_kosten, linestyle=':', marker='s',
-#         color='black', label='Preis Netzstrom')
-
 lines1, labels1 = ax1.get_legend_handles_labels()
-lines2, labels2 = ax2.get_legend_handles_labels()
-ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+ax1.legend(lines1, labels1, loc='upper left')
 
 ax1.set_title("Verbrauch & Preis (bestehend)")
 ax1.set_ylabel("Energie (Wh)")
@@ -228,6 +247,7 @@ ax1.grid(True)
 total = sum((e + s) * -k for e, s, k in zip(energyConsumption, values_pv, values_kosten))
 total_bestehend = sum(e * k for e, k in zip(bezug_bestehend, values_kosten))
 total_optimized = sum(e * k for e, k in zip(energy_bought_list, values_kosten))
+total_optimized = total_optimized / 1000
 
 energyBrought = sum((e + s) *-1 for e, s in zip(energyConsumption, values_pv))
 energyBrought_bestehend = sum(e for e in bezug_bestehend)
@@ -236,8 +256,9 @@ energyBrought_optimized = sum(e/1000 for e in energy_bought_list)
 description = (
     "Optimization results:\n"
     f"The costs were assumed to be {total:.1f} buying directly, in the current optimization the cost would be reduced to {total_bestehend:.1f}\n"
-    f"Further optimization could bring this to {total_optimized / 1000:.1f}.\n"
-    f"The system would need {energyBrought} kWh, the current version would buy {energyBrought_bestehend} and the optimizer would buy {energyBrought_optimized}\n"
+    f"Further optimization could bring this to {total_optimized:.1f}.\n"
+    f"The system would need {energyBrought} kWh, the current version would buy {energyBrought_bestehend} and the optimizer would buy {energyBrought_optimized:.1f}\n"
+    f"The price per energy-unit would be { total /energyBrought :.1f} vs {total_bestehend/energyBrought_bestehend:.1f} vs {total_optimized/energyBrought_optimized :.1f}\n"
 )
 
 fig.text(
@@ -253,3 +274,30 @@ fig.text(
 plt.tight_layout(rect=[0, 0.08, 1, 1])
 #plt.show()
 plt.savefig(folderName+"\\" + folderName + ".png", dpi=300, bbox_inches='tight')
+
+# befehle
+commands = {}
+for i in interval:
+    #in case the battery would be discharged
+    if is_discharging_list[i] == 1 and battery_discharge_list[i] > 0:
+        commands[i] = "DIS"
+    #as soon as outside energy is used to load the battery
+    # regardless of input from the solar pv
+    elif(outside_to_battery_list[i] > 0 and is_charging_list[i] == 1):
+        commands[i] = "ACC"
+
+    elif(is_discharging_list[i] == 0 and is_charging_list[i] == 1 and outside_to_battery_list[i] == 0 and solar_to_battery_list[i] > 0):
+        commands[i] = "NOD"
+    elif(is_discharging_list[i] == 0 and is_charging_list[i] == 0):
+        commands[i] = "NOD"
+    elif(is_discharging_list[i] == 1 and battery_discharge_list[i] == 0):
+        commands[i] = "NOD"
+    else:
+        commands[i] = "TEST"
+
+grouped = group_commands(commands)
+    
+
+for g in grouped:
+    print(g)
+#print(commands)

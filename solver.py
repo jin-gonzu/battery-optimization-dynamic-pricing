@@ -7,40 +7,25 @@ def create_vars(s, I, mc, md, bs_min, bs_max, init_bs):
         {i: s.IntVar(0, md, f"bD_{i}") for i in I},
         {i: s.IntVar(bs_min, bs_max, f"bS_{i}") for i in I},
         {i: s.IntVar(0, s.infinity(), f"sell_{i}") for i in I},
-        {i: s.IntVar(0, s.infinity(), f"s2b_{i}") for i in I},
+        {i: s.IntVar(0, md, f"solar_to_battery_{i}") for i in I},
         {i: s.BoolVar(f"dA_{i}") for i in I},
-        {i: s.NumVar(0, init_bs, f"initE_{i}") for i in I},
+        {i: s.IntVar(0, init_bs, f"initE_{i}") for i in I},
         {i: s.BoolVar(f"isCharging_{i}") for i in I},
-        {i: s.BoolVar(f"can_full_charge{i}") for i in I},
+        {i: s.BoolVar(f"isDisCharging_{i}") for i in I},
     )
 
-def addConstraintCharging(solver, interval, battery_status, battery_charge, solar_to_battery, is_charging, can_full_charge, battery_charge_power, battery_max_capacity ):
+def addConstraintDisCharge(solver, interval, battery_discharge, battery_discharge_power, is_discharging):
     for i in interval:
-        #upper bound, if is_charging ==  0 -> battery_charge[i] must be smaller or equal to zero
-        # this says: you are never allowed to load more than the battery_charge_power constant allowes
-        solver.Add(battery_charge[i] <= battery_charge_power * is_charging[i])
-
-        #the lower and upper bound set the value of battery_charge[i] to either 0 or battery_charge_power
-        # in case the battery is already full we can load any amount
-        # if the battery is not full, we have to load a full interval battery_charge_power units
-        solver.Add(battery_max_capacity - battery_status[i] >= battery_charge_power - battery_max_capacity*(1 - can_full_charge[i]))
-        solver.Add(battery_charge[i] <= battery_charge_power * can_full_charge[i] + battery_max_capacity*(1 - can_full_charge[i]))
-        solver.Add(can_full_charge[i] <= is_charging[i])
-
-        #battery_charge is bigger or equal battery_charge_power
-        solver.Add(solar_to_battery[i] <= battery_charge_power * is_charging[i])
-        solver.Add(battery_charge_power >= solar_to_battery[i] + battery_charge[i])
-
-def addConstraintDisCharge(solver, interval, battery_discharge, battery_discharge_power, is_charging):
-    for i in interval:
-        solver.Add(battery_discharge[i] <= battery_discharge_power * (1 - is_charging[i]))
+        solver.Add(battery_discharge[i] <= battery_discharge_power * is_discharging[i])
 
 def addConstraintBatteryStatus(solver, interval, battery_status, battery_charge, battery_discharge, solar_to_battery, battery_initial_capacity ):
     #calculation of battery status, history, start and end
-    solver.Add(battery_status[0] == battery_initial_capacity + battery_charge[0] - battery_discharge[0] + solar_to_battery[0])
-    #solver.Add(battery_status[interval[-1]] == battery_target_capacity)
+    solver.Add(battery_status[0] == battery_initial_capacity + battery_charge[0] - battery_discharge[0])
+    
+    #solver.Add(battery_status[interval[-1]] == battery_initial_capacity)
+
     for i in range(1, len(interval)):
-        solver.Add(battery_status[i] == battery_status[i-1] + battery_charge[i] - battery_discharge[i] + solar_to_battery[i])
+        solver.Add(battery_status[i] == battery_status[i-1] + battery_charge[i] - battery_discharge[i])
 
 def solve_solar(interval,
                 consumption,
@@ -64,10 +49,49 @@ def solve_solar(interval,
        
     #create variables
     (outside_power, battery_charge, battery_discharge, battery_status, selling, solar_to_battery, dischargeAllowed
-     , initial_energy_left, is_charging, can_full_charge) = create_vars( solver, interval, battery_charge_power, battery_discharge_power, battery_minimal_capacity, battery_max_capacity, battery_initial_capacity )
+     , initial_energy_left, is_charging, is_discharging) = create_vars( solver, interval, battery_charge_power, battery_discharge_power, battery_minimal_capacity, battery_max_capacity, battery_initial_capacity )
+
+    outside_to_battery = {}
+    outside_to_load = {}
+    solar_to_load = {}
+    is_import = {}
+    is_export = {}
+    M = 10000
+
+    for i in interval:
+        outside_to_battery[i] = solver.IntVar(0, battery_charge_power, f"otB_{i}")
+        outside_to_load[i] = solver.IntVar(0, solver.infinity(), f"otG_{i}")
+        solar_to_load[i] = solver.IntVar(0, solver.infinity(), f"stG_{i}")
+        is_import[i] = solver.BoolVar(f"is_import_{i}")
+        is_export[i] = solver.BoolVar(f"is_export_{i}")
     
-    addConstraintCharging(solver, interval, battery_status, battery_charge, solar_to_battery, is_charging, can_full_charge, battery_charge_power, battery_max_capacity )
-    addConstraintDisCharge(solver, interval, battery_discharge, battery_discharge_power, is_charging)
+    for i in interval:
+            #set the variable is_charging
+            # it must be 1 in case the battery_status goes up
+            # and it must be 0 in case the battery does not change or discharge is happening
+                #solver.Add(battery_status[i] >= battery_status[i-1] + delta - battery_max_capacity * (1 - is_charging[i]))
+                #solver.Add(battery_status[i] <= battery_status[i-1] + battery_max_capacity * is_charging[i])
+            #set the variable is_discharging
+            # it must be 1 in case the battery_status goes down
+            # and it must be 0 in case the battery does not change or charge is happening
+                #solver.Add(battery_status[i] <= battery_status[i-1] - delta + battery_max_capacity * (1 - is_discharging[i]))
+                #solver.Add(battery_status[i] >= battery_status[i-1] - battery_max_capacity * is_discharging[i])
+
+            solver.Add(is_charging[i] + is_discharging[i] <= 1)
+            
+            solver.Add(outside_to_load[i] + outside_to_battery[i] <= M * is_import[i])
+            solver.Add(selling[i] <= M * is_export[i])
+            solver.Add(is_import[i] + is_export[i] <= 1)
+
+
+    for i in interval:
+        solver.Add(battery_charge[i] <= battery_charge_power * is_charging[i])
+        solver.Add(outside_power[i] == outside_to_battery[i] + outside_to_load[i])
+        solver.Add(outside_to_battery[i] >= battery_charge_power * is_charging[i] - solar_to_battery[i]*0.9)
+        solver.Add(battery_charge[i] == solar_to_battery[i] * 0.9 + outside_to_battery[i])
+
+
+    addConstraintDisCharge(solver, interval, battery_discharge, battery_discharge_power, is_discharging)
 
     #constraint for bool variable dischargeAllowed
     # in case the battery was at under 30 % the inverter will first load the battery to 80 % before allowing the battery to discharge
@@ -82,7 +106,10 @@ def solve_solar(interval,
             solver.Add(battery_discharge[i] >= -battery_discharge_power * dischargeAllowed[i])
             solver.Add(battery_charge[i] <= battery_charge_power)
 
+    # battery status constraints, history of battery status and fill level
     addConstraintBatteryStatus(solver, interval, battery_status, battery_charge, battery_discharge, solar_to_battery, battery_initial_capacity )
+
+
 
     #initialEnergyLeft
     solver.Add(initial_energy_left[0] == battery_initial_capacity)
@@ -96,20 +123,12 @@ def solve_solar(interval,
             - sum(battery_discharge[j] for j in interval if j <= i)
         )
     
+
     for i in interval:
-        solver.Add(
-            solar_production[i]
-            + outside_power[i]
-            - battery_charge[i] + battery_discharge[i]
-            - solar_to_battery[i]
-            == consumption[i] + selling[i]
-        )
-        
-    for i in interval:
-        solver.Add(selling[i] <= solar_production[i] - solar_to_battery[i])
-        solver.Add(solar_to_battery[i] <= solar_production[i]  * 0.9 - selling[i])
+        solver.Add(consumption[i] == solar_to_load[i] + battery_discharge[i] + outside_to_load[i] )
+        solver.Add(solar_production[i] == solar_to_battery[i] + solar_to_load[i] + selling[i])
     
-    
+    #if one would want to disable switching
     #switch = {}
     #for i in interval[1:]:
     #    switch[i] = solver.BoolVar(f"switch_{i}")
@@ -121,11 +140,13 @@ def solve_solar(interval,
     end_charge_bonus = solver.NumVar(-solver.infinity(), solver.infinity(), "end_charge_bonus")
     solver.Add(end_charge_bonus == battery_status[interval[-1]] - initial_energy_left[interval[-1]] - battery_status[interval[0]])
     used_initial_energy = {}
-    objective = solver.Objective()
+    
     for i in interval:
         used_initial_energy[i] = solver.NumVar(0, battery_initial_capacity, f"used_initial_energy[{i}]")
         solver.Add(used_initial_energy[i] == battery_initial_capacity - initial_energy_left[i])
         
+    objective = solver.Objective()
+    for i in interval:
         #the loaded energy has a price, if the inital enery was used, it must be payed
         objective.SetCoefficient(used_initial_energy[i], price_using_battery)
         #the left over inside the battery is something positiv, we still have this value
@@ -137,11 +158,12 @@ def solve_solar(interval,
         #we get the money from selling energy
         objective.SetCoefficient(selling[i], -price_selling_energy)
 
-
         #if we load more inside the battery, we create value
         objective.SetCoefficient(end_charge_bonus, -price_selling_energy)
         #if(i > 0):
         #    objective.SetCoefficient(switch[i], 5000000)
+
+
 
     objective.SetMinimization()
 
@@ -152,14 +174,18 @@ def solve_solar(interval,
     battery_discharge_list = []
     battery_charge_list = []
     solar_energy_list = []
+    is_charging_list = []
+    is_discharging_list = []
+    outside_to_battery_list = []
+    solar_to_battery_list = []
 
     if status != pywraplp.Solver.OPTIMAL:
         print("Keine optimale Lösung gefunden")
-        return soc_list, energy_bought_list, battery_discharge_list,battery_charge_list, solar_energy_list
+        return soc_list, energy_bought_list, battery_discharge_list,battery_charge_list, solar_energy_list,is_charging_list, is_discharging_list, outside_to_battery_list,solar_to_battery_list
 
     # Header mit Tabs
     print(
-        f"Step\tUsed\tOutside\tKosten\tSolar\tSold\tSOC(%)\tBC\tBDC\tSolar\tinitial\tBS"
+        f"Step\tUsed\tOutside\tKosten\tSolar\tSold\tSOC(%)\tBC\tisChar\tisDChar\tBDC\tSolTB\tOuTB\tinitial\tBS"
     )
 
     costs_without_balancing = 0
@@ -177,7 +203,30 @@ def solve_solar(interval,
         battery_discharge_list.append(battery_discharge[i].solution_value())
         battery_charge_list.append(battery_charge[i].solution_value())
         solar_energy_list.append(solar_production[i])
-        
+        is_charging_list.append(is_charging[i].solution_value())
+        is_discharging_list.append(is_discharging[i].solution_value())
+        outside_to_battery_list.append(outside_to_battery[i].solution_value())
+        solar_to_battery_list.append(solar_to_battery[i].solution_value())
+
+        if(battery_discharge[i].solution_value() > battery_discharge_power):
+            print("Error Discharge Value too hight")
+
+        if(selling[i].solution_value() > 0 and outside_power[i].solution_value() > 0):
+            print("Error Selling and Buying is impossible at the same time")
+            print(f" Charge: {battery_charge[i].solution_value()}, davon Solar: {round(solar_to_battery[i].solution_value())} also *0.9: {round(solar_to_battery[i].solution_value()) *0.9} und davon Grid {round(outside_to_battery[i].solution_value())} ")
+            print(f" Consum: {consumption[i]}, davon Solar: {round(solar_to_load[i].solution_value())} und davon Grid {round(outside_to_load[i].solution_value())} ")
+            print(f" Verfügbarer Solarstrom: {solar_production[i]}, davon verkauft: {selling[i].solution_value()}")
+            print(f" Import?: {is_import[i].solution_value()}, Export?: {is_export[i].solution_value()}")
+
+            
+
+        if(is_charging[i].solution_value() == 0 and ( round(solar_to_battery[i].solution_value()) > 0 or round(outside_to_battery[i].solution_value()) > 0) ):
+            print("Error is Charging must be set, if loading occures")
+
+        if(is_charging[i].solution_value() == 1 and is_discharging[i].solution_value() == 1 ):
+            print("Error is Charging and is Discharging must never be 1 at the same time")
+
+
         if(printEnabled):
             print(
                 f"{i}\t"
@@ -188,11 +237,13 @@ def solve_solar(interval,
                 f"{selling[i].solution_value()}\t"
                 f"{soc_percent:.1f}\t"  # SOC in %
                 f"{battery_charge[i].solution_value()}\t"
+                f"{is_charging[i].solution_value()}\t"
+                f"{is_discharging[i].solution_value()}\t"
                 f"{battery_discharge[i].solution_value()}\t"
-                f"{solar_to_battery[i].solution_value()}\t"
-                f"{dischargeAllowed[i].solution_value()}\t"
+                f"{round(solar_to_battery[i].solution_value())}\t"
+                f"{round(outside_to_battery[i].solution_value())}\t"
                 f"{initial_energy_left[i].solution_value():.1f}\t"
                 f"{battery_status[i].solution_value():.1f}"
             )
 
-    return soc_list, energy_bought_list, battery_discharge_list,battery_charge_list, solar_energy_list
+    return soc_list, energy_bought_list, battery_discharge_list,battery_charge_list, solar_energy_list,is_charging_list, is_discharging_list, outside_to_battery_list,solar_to_battery_list
