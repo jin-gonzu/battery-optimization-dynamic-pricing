@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 from ortools.linear_solver import pywraplp
 import example
@@ -12,30 +11,6 @@ from batteryCommands.sma import group_commands
 from batteryCommands.sma import format_command_schedule
 
 interval = list(range(96))
-
-def group_commands(commands):
-    grouped_commands = []
-    sorted_intervals = sorted(commands.keys())
-    if not sorted_intervals:
-        return grouped_commands
-    current_cmd = commands[sorted_intervals[0]]
-    start = sorted_intervals[0]
-    for i in sorted_intervals[1:]:
-        if commands[i] != current_cmd:
-            grouped_commands.append({
-                'cmd': current_cmd,
-                'p1': start,
-                'p2': i  # i ist die erste Periode mit neuem Befehl
-            })
-            current_cmd = commands[i]
-            start = i
-    # letztes Intervall hinzufügen
-    grouped_commands.append({
-        'cmd': current_cmd,
-        'p1': start,
-        'p2': sorted_intervals[-1] + 1  # +1 für exklusives Ende
-    })
-    return grouped_commands
 
 def readData(filename, length):
     with open(filename) as f:
@@ -72,7 +47,7 @@ def read_battery_file(filename):
     return battery_soc_initial, soc_bestehend, bezug_bestehend
 
 # Beispielaufruf
-folderName = "22.01"
+folderName = "20.01"
 battery_soc_initial, soc_bestehend, bezug_bestehend = read_battery_file(folderName+"/log.log")
 
 print("Initial SOC:", battery_soc_initial)
@@ -100,7 +75,7 @@ battery_discharge_power= 1500
 price_selling_energy = 785
 price_using_battery = 3091
 
-#lösung bestehendes System
+#loesung bestehendes System
 #bezug_bestehend = [
 #    2.0, 1.5, 1.2, 1.2, 2.0, 1.4, 1.2, 1.2, 2.1, 1.5, 1.2, 1.2, 2.1, 2.3, 2.1, 2.1, 2.9, 1.7, 1.2, 1.2, 0.0, 0.0, 1.1, 1.1,
 #    2.0, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
