@@ -1,9 +1,11 @@
 
 import matplotlib.pyplot as plt
 from ortools.linear_solver import pywraplp
+import example
 from solver import solve_solar
 import numpy as np
 import re
+from example import exampleData
 
 interval = list(range(96))
 
@@ -71,7 +73,7 @@ def read_battery_file(filename):
     return battery_soc_initial, soc_bestehend, bezug_bestehend
 
 # Beispielaufruf
-folderName = "21.01"
+folderName = "22.01"
 battery_soc_initial, soc_bestehend, bezug_bestehend = read_battery_file(folderName+"/log.log")
 
 print("Initial SOC:", battery_soc_initial)
@@ -81,6 +83,8 @@ print("Bezug array:", bezug_bestehend[:10], "...")
 values_kosten = readData(folderName+"/netztarif.log", len(interval))
 energyConsumption = readData(folderName+"/verbrauch.log", len(interval))
 values_pv = readData(folderName+"/pv.log", len(interval))
+
+#energyConsumption, values_pv, values_kosten, interval = exampleData()
 
 #battery_soc_initial = 70;
 battery_soc_target = 35;
@@ -96,7 +100,7 @@ battery_charge_power= 1000
 battery_discharge_power= 1500
 
 price_selling_energy = 785
-price_using_battery = 3080
+price_using_battery = 3091
 
 #lösung bestehendes System
 #bezug_bestehend = [
@@ -129,16 +133,16 @@ solar_production = {i: int(v * 1000) for i, v in zip(interval, values_pv)}
 
 soc_optimiert, energy_bought_list, battery_discharge_list, battery_charge_list, solar_energy_list, is_charging_list, is_discharging_list, outside_to_battery_list,solar_to_battery_list = solve_solar(
     interval=interval,
-    consumption=consumption,
-    price_outside_power=price_outside_power,
-    price_selling_energy=price_selling_energy,
-    solar_production=solar_production,
-    battery_initial_capacity=battery_initial_capacity,
-    battery_minimal_capacity=battery_minimal_capacity,
-    battery_charge_power=battery_charge_power,
-    battery_discharge_power=battery_discharge_power,
-    battery_max_capacity=battery_max_capacity,
-    price_using_battery = price_using_battery,
+    C=consumption,
+    P=price_outside_power,
+    P_solar=price_selling_energy,
+    S=solar_production,
+    B_c_initial=battery_initial_capacity,
+    B_c_min=battery_minimal_capacity,
+    B_charge_max=battery_charge_power,
+    B_discharge_max=battery_discharge_power,
+    B_c_max=battery_max_capacity,
+    P_loaded = price_using_battery,
     battery_target_capacity = battery_target_capacity,
     mustLoadFirst =0,
     min_battery_discharge = 23040,

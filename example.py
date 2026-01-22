@@ -1,3 +1,12 @@
+
+def exampleData():
+    interval = list(range(2))
+    energyConsumption = [0,-1]
+    values_pv = [0,0]
+    values_kosten = [29,30]
+
+    return energyConsumption, values_pv, values_kosten, interval
+
 #energyConsumption = [
 #    -1.045, -0.754, -0.170, -0.170, -1.033, -0.741, -0.158, -0.158,
 #    -1.054, -0.763, -0.179, -0.179, -1.065, -0.773, -0.190, -0.190,
