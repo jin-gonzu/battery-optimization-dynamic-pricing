@@ -175,6 +175,22 @@ $$
 E^B = B_{I_{\max}} - E^0_{I_{\max}}
 $$
 
+### Objective Function Explanation
+
+The objective function creates a balance between purchased energy and battery charging by pricing not only the purchased energy but also the charged (or discharged) energy from the battery. This mechanism ensures economically optimal battery usage based on dynamic electricity prices.
+
+The term $P_{\mathrm{loaded}} \cdot (B_{I_{\max}} - B_{c,\mathrm{initial}})$ represents the value change of energy stored in the battery over the optimization period. By valuing battery energy at $P_{\mathrm{loaded}}$, the optimizer compares the cost of grid energy at each time step against the opportunity cost of using battery energy.
+
+**Behavioral Analysis:**
+
+| Condition | Behavior | Explanation |
+|-----------|----------|-------------|
+| $P_{\mathrm{loaded}} = P_i$ | No incentive for battery usage | The value of battery energy equals grid energy cost - this case is irrelevant for dynamic tariffs |
+| $P_{\mathrm{loaded}} > P_i$ | Battery charges | Cheap grid energy is purchased and stored for later use |
+| $P_{\mathrm{loaded}} < P_i$ | Battery discharges more | Grid prices exceed the battery's charging cost, making discharge economically beneficial |
+
+This behavior is desired as it implements a price arbitrage strategy: buy low, store, and use/sell high. The battery acts as an energy storage buffer that shifts consumption to periods with lower electricity prices, thereby minimizing total costs.
+
 ## Project Structure
 
 - `solver.py` – OR-Tools solver using `pywraplp.Solver.CreateSolver("CBC")` or `"SCIP"`  
