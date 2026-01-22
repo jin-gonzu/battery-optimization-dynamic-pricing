@@ -35,3 +35,5 @@ cd Battery-Optimization-With-Dynamic-Energy-Pricing
 python -m pip install ortools
 
 https://developers.google.com/optimization/install?hl=de
+
+$\sum_{i \in I}$
