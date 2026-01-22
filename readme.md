@@ -30,7 +30,7 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 | $E^D_i$ | Energy discharged from battery at step $i$ | $E^D_i \in [0,B_\text{discharge}^{\max}]$ |
 | **Energy Flow Variables** | | |
 | $E^G_i$ | Energy bought from the grid at step $i$ | $E^G_i \in [0,\infty)$ |
-| $E^{OL}_i$ | Energy from grid to load at step $i$ | $E^{OL}_i \in [0,\infty)$ |
+| $E^{GL}_i$ | Energy from grid to load at step $i$ | $E^{OL}_i \in [0,\infty)$ |
 | $E^{GB}_i$ | Energy from grid to battery at step $i$ | $E^{GB}_i \in [0,B_\text{charge}^{\max}]$ |
 | $E^{SB}_i$ | Solar energy charged to battery at step $i$ | $E^{SB}_i \in [0,B_\text{charge}^{\max}]$ |
 | $E^{SL}_i$ | Solar energy to load at step $i$ | $E^{SL}_i \in [0,S_i]$ |
