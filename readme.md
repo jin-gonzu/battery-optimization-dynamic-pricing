@@ -26,6 +26,14 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 
 ---
 
+$$
+B_{i+1} = B_i + E^C_i - E^D_i, \quad \forall i \in I
+$$
+
+$$
+B_{c,\min} \le B_i \le B_{c,\max}, \quad \forall i \in I
+$$
+
 ## Installation
 
 1. Clone the repository:
