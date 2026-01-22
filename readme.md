@@ -46,6 +46,33 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 | $m_i$ | 1 if energy import at step $i$ | $\{0,1\}$ |
 | $y_i$ | 1 if energy export at step $i$ | $\{0,1\}$ |
 
+### Binary Control Constraints
+
+**No simultaneous charging and discharging:**
+$$
+c_i + x_i \le 1, \quad \forall i \in I
+$$
+
+**Grid import control (Big-M constraint):**
+$$
+E^{GL}_i + E^{GB}_i \le M \cdot m_i, \quad \forall i \in I
+$$
+
+**Solar export control (Big-M constraint):**
+$$
+E^S_i \le M \cdot y_i, \quad \forall i \in I
+$$
+
+**No simultaneous import and export:**
+$$
+m_i + y_i \le 1, \quad \forall i \in I
+$$
+
+**Binary variable definitions:**
+$$
+c_i, x_i, m_i, y_i \in \{0,1\}, \quad \forall i \in I
+$$
+
 ---
 
 ## Project Structure
