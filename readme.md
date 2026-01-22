@@ -48,7 +48,7 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 **Minimize total cost:**
 
 $$
-\min \quad \sum_{i \in I} \left( P_i \cdot E^G_i - P_{\mathrm{solar}} \cdot E^S_i \right) - P_{\mathrm{loaded}} \cdot B_{c,\mathrm{initial}} + P_{\mathrm{loaded}} \cdot B_{I_{\max}}
+\min \quad \sum_{i \in I} \left( P_i \cdot E^G_i - P_{\mathrm{solar}} \cdot E^S_i \right) - P_{\mathrm{loaded}} \cdot B_{I_{\max}}
 $$
 
 ### 2. Energy Balance Constraints
