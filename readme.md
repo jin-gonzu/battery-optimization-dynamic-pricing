@@ -35,10 +35,6 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 | $E^{SB}_i$ | Solar energy charged to battery at step $i$ | $E^{SB}_i \in [0,B_\text{charge}^{\max}]$ |
 | $E^{SL}_i$ | Solar energy to load at step $i$ | $E^{SL}_i \in [0,S_i]$ |
 | $E^S_i$ | Solar energy sold at step $i$ | $E^S_i \in [0,S_i]$ |
-| **Initial Energy Variables** | | |
-| $E^U_i$ | Used initial energy at step $i$ | $E^U_i \in [0,B_{c,\mathrm{initial}}]$ |
-| $E^0_i$ | Remaining initial energy at step $i$ | $E^0_i \in [0,B_{c,\mathrm{initial}}]$ |
-| $E^B$ | Bonus for remaining charge at the last step | $E^B \in [-\infty,\infty]$ |
 | **Binary Control Variables** | | |
 | $d_i$ | 1 if discharge allowed at step $i$ | $\{0,1\}$ |
 | $c_i$ | 1 if charging at step $i$ | $\{0,1\}$ |
@@ -141,38 +137,6 @@ $$
 
 $$
 c_i, x_i, m_i, y_i \in \{0,1\}, \quad \forall i \in I
-$$
-
-### 6. Initial Energy Tracking
-**Initial energy at start:**
-
-$$
-E^0_0 = B_{c,\mathrm{initial}}
-$$
-
-**Remaining initial energy bounded by battery state:**
-
-$$
-E^0_i \le B_i, \quad \forall i \in I
-$$
-
-**Remaining initial energy definition:**
-
-$$
-E^0_i \ge B_{c,\mathrm{initial}} - \sum_{j=0}^{i} E^D_j, \quad \forall i \in I
-$$
-
-**Used initial energy at each step:**
-
-$$
-E^U_i = B_{c,\mathrm{initial}} - E^0_i, \quad \forall i \in I
-$$
-
-### 7. End-of-Period Accounting
-**Bonus for remaining charge at end:**
-
-$$
-E^B = B_{I_{\max}} - E^0_{I_{\max}}
 $$
 
 ### Objective Function Explanation
