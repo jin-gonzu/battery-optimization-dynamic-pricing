@@ -216,9 +216,10 @@ This behavior is desired as it implements a price arbitrage strategy: buy low, s
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/Battery-Optimization-With-Dynamic-Energy-Pricing.git
+git clone https://github.com/jin-gonzu/battery-optimization-dynamic-pricing.git
 cd Battery-Optimization-With-Dynamic-Energy-Pricing
 python -m pip install ortools
 
-https://developers.google.com/optimization/install?hl=de
+execute Solar.py
+adjust with own data
 
