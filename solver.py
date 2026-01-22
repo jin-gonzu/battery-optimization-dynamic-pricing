@@ -49,9 +49,9 @@ def solve_solar(interval,
     E_S   = {i: solver.IntVar(0, solver.infinity(),   f"E_S_{i}")        for i in interval}
 
     #---------------------Initial Energy Variables
-    E_0   = {i: solver.IntVar(0, B_c_initial,         f"E_0_{i}")        for i in interval}
-    E_U   = {i: solver.IntVar(0, B_c_initial,         f"E_U_{i}")        for i in interval}
-    E_B   = solver.IntVar(-solver.infinity(), solver.infinity(), "E_B")
+    #E_0   = {i: solver.IntVar(0, B_c_initial,         f"E_0_{i}")        for i in interval}
+    #E_U   = {i: solver.IntVar(0, B_c_initial,         f"E_U_{i}")        for i in interval}
+    #E_B   = solver.IntVar(-solver.infinity(), solver.infinity(), "E_B")
     
     #---------------------Binary Control Variables
     d     = {i: solver.BoolVar(f"d_{i}")                             for i in interval}
@@ -92,16 +92,16 @@ def solve_solar(interval,
 
     #constraint for bool variable d
     # in case the battery was at under 30 % the inverter will first load the battery to 80 % before allowing the battery to discharge
-    if(mustLoadFirst):
-        for i in interval:
-            if(i == 0):
-                #initially the variable is based on the initial battery status
-                solver.Add( d[i] <= (B[i] / min_battery_discharge))
-            else:
-                # in case the 
-                solver.Add(d[i] <= (B[i] / min_battery_discharge) + d[i-1])
-            solver.Add(E_D[i] >= -B_discharge_max * d[i])
-            solver.Add(E_C[i] <= B_charge_max)
+    #if(mustLoadFirst):
+    #    for i in interval:
+    #        if(i == 0):
+    #            #initially the variable is based on the initial battery status
+    #            solver.Add( d[i] <= (B[i] / min_battery_discharge))
+    #        else:
+    #            # in case the 
+    #            solver.Add(d[i] <= (B[i] / min_battery_discharge) + d[i-1])
+    #        solver.Add(E_D[i] >= -B_discharge_max * d[i])
+    #        solver.Add(E_C[i] <= B_charge_max)
 
     # battery status constraints, history of battery status and fill level
     addConstraintBatteryStatus(solver, interval, B, E_C, E_D, E_SB, B_c_initial )
@@ -109,16 +109,16 @@ def solve_solar(interval,
 
 
     #initialEnergyLeft
-    solver.Add(E_0[0] == B_c_initial)
-    for i in interval:
-        solver.Add(E_0[i] <= B[i])
-        
-    for i in interval:
-        solver.Add(
-            E_0[i]
-            >= B_c_initial
-            - sum(E_D[j] for j in interval if j <= i)
-        )
+    #solver.Add(E_0[0] == B_c_initial)
+    #for i in interval:
+    #    solver.Add(E_0[i] <= B[i])
+    #    
+    #for i in interval:
+    #    solver.Add(
+    #        E_0[i]
+    #        >= B_c_initial
+    #        - sum(E_D[j] for j in interval if j <= i)
+    #    )
     
 
     for i in interval:
@@ -135,11 +135,10 @@ def solve_solar(interval,
     #    solver.Add(switch[i] >= c[i-1] - c[i])
 
     
-    solver.Add(E_B == B[interval[-1]] - E_0[interval[-1]])
+    #solver.Add(E_B == B[interval[-1]] - E_0[interval[-1]])
     
-    for i in interval:
-        
-        solver.Add(E_U[i] == B_c_initial - E_0[i])
+    #for i in interval:
+    #    solver.Add(E_U[i] == B_c_initial - E_0[i])
         
     objective = solver.Objective()
     min_price = min(P.values())
@@ -154,18 +153,17 @@ def solve_solar(interval,
         #we get the money from E_S energy
         objective.SetCoefficient(E_S[i], -P_solar)
 
-        if(battery_objective_new):
-            #objective function for the battery and whats inside
-                #the loaded energy has a price, if the inital enery was used, it must be payed
-            objective.SetCoefficient(E_U[i], P_loaded - P[i])
-                #the left over inside the battery is something positiv, we still have this value
-            objective.SetCoefficient(E_0[interval[-1]], -P_loaded)
-                #if we load more inside the battery, we create value
-            objective.SetCoefficient(E_B, -avg_price)
-        else:
-            #the initial energy is something we have
-            objective.SetCoefficient(E_0[0], -P_loaded)
-            objective.SetCoefficient(B[interval[-1]], P_loaded)
+        # possible other objective funktion
+        #    #objective function for the battery and whats inside
+        #        #the loaded energy has a price, if the inital enery was used, it must be payed
+        #    objective.SetCoefficient(E_U[i], P_loaded - P[i])
+        #        #the left over inside the battery is something positiv, we still have this value
+        #    objective.SetCoefficient(E_0[interval[-1]], -P_loaded)
+        #        #if we load more inside the battery, we create value
+        #    objective.SetCoefficient(E_B, -avg_price)
+        
+        #rate the energy level at the last step
+        objective.SetCoefficient(B[interval[-1]], -P_loaded)
 
 
             #could be used to price the intial start energy
@@ -212,7 +210,7 @@ def solve_solar(interval,
 
     costs_without_balancing = 0
     costs_with_balancing = 0
-    costs_initial_energy = 0
+    #costs_initial_energy = 0
     energy_bought = 0
     for i in interval:
         soc_percent = (B[i].solution_value() / B_c_max) * 100  # SOC in %
@@ -220,7 +218,7 @@ def solve_solar(interval,
         
         costs_without_balancing += C[i] * P[i]
         costs_with_balancing += E_G[i].solution_value() * P[i]
-        costs_initial_energy += E_U[i].solution_value() * P_loaded
+        #costs_initial_energy += E_U[i].solution_value() * P_loaded
         energy_bought +=E_G[i].solution_value()
         
         energy_bought_list.append(E_G[i].solution_value())
@@ -268,13 +266,8 @@ def solve_solar(interval,
                 f"{round(E_GB[i].solution_value())}\t"
                 #f"{round(E_SL[i].solution_value())}\t"
                 #f"{round(E_GL[i].solution_value())}\t"
-                f"{E_0[i].solution_value():.1f}\t"
+                #f"{E_0[i].solution_value():.1f}\t"
                 f"{B[i].solution_value():.1f}"
             )
-
-
-    print(f"Kosten Einkauf: {costs_with_balancing}, Kosten entladener Initial-Strom: {costs_initial_energy}, Gewinn durch nicht entladenen Initial-Strom: {E_0[interval[-1]].solution_value() * -P_loaded:.1f}, Gewinn durch Batterie Füllstand: {E_B.solution_value() * min_price}")
-    print(f"{costs_with_balancing}, {costs_initial_energy:.1f}, {E_0[interval[-1]].solution_value() * -P_loaded}, {E_B.solution_value() * min_price:.1f}")
-    print(f"{costs_with_balancing}, {costs_initial_energy:.1f}, {E_0[interval[-1]].solution_value()} * {-P_loaded}, {E_B.solution_value()} * {min_price:.1f}, {avg_price}")
 
     return soc_list, energy_bought_list, battery_discharge_list,battery_charge_list, solar_energy_list,is_charging_list, is_discharging_list, outside_to_battery_list,solar_to_battery_list
