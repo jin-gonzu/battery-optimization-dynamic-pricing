@@ -46,20 +46,25 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 | $m_i$ | 1 if energy import at step $i$ | $\{0,1\}$ |
 | $y_i$ | 1 if energy export at step $i$ | $\{0,1\}$ |
 
-### Objective Function
+## Mathematical Model Formulation
 
+### 1. Objective Function
 **Minimize total cost:**
 
 $$
-\min \quad Z = \sum_{i \in I} \left( P_i \cdot E^G_i - P_{\mathrm{solar}} \cdot E^S_i \right) - P_{\mathrm{loaded}} \cdot B_{c,\mathrm{initial}} + P_{\mathrm{loaded}} \cdot B_{I_{\max}}
+\min \quad \sum_{i \in I} \left( P_i \cdot E^G_i - P_{\mathrm{solar}} \cdot E^S_i \right) - P_{\mathrm{loaded}} \cdot B_{c,\mathrm{initial}} + P_{\mathrm{loaded}} \cdot B_{I_{\max}}
 $$
 
-### Energy Flow and Charging Constraints
-
-**Battery charging limit:**
+### 2. Energy Balance Constraints
+**Load energy balance:**
 
 $$
-E^C_i \le B_\text{charge}^{\max} \cdot c_i, \quad \forall i \in I
+C_i = E^{SL}_i + E^D_i + E^{GL}_i, \quad \forall i \in I
+$$
+
+**Solar energy balance:**
+$$
+S_i = E^{SB}_i + E^{SL}_i + E^S_i, \quad \forall i \in I
 $$
 
 **Grid energy decomposition:**
@@ -68,10 +73,30 @@ $$
 E^G_i = E^{GB}_i + E^{GL}_i, \quad \forall i \in I
 $$
 
-**Grid-to-battery minimum flow:**
+### 3. Battery State Dynamics
+**Initial battery state:**
 
 $$
-E^{GB}_i \ge B_\text{charge}^{\max} \cdot c_i - E^{SB}_i \cdot 0.9, \quad \forall i \in I
+B_0 = B_{c,\mathrm{initial}} + E^C_0 - E^D_0
+$$
+
+**Battery state evolution:**
+
+$$
+B_i = B_{i-1} + E^C_i - E^D_i, \quad \forall i \in I \setminus \{0\}
+$$
+
+### 4. Battery Charging and Discharging Constraints
+**Battery charging limit:**
+
+$$
+E^C_i \le B_\text{charge}^{\max} \cdot c_i, \quad \forall i \in I
+$$
+
+**Battery discharging limit:**
+
+$$
+E^D_i \le B_\text{discharge}^{\max} \cdot x_i, \quad \forall i \in I
 $$
 
 **Total battery charging:**
@@ -80,12 +105,23 @@ $$
 E^C_i = E^{SB}_i \cdot 0.9 + E^{GB}_i, \quad \forall i \in I
 $$
 
-### Binary Control Constraints
+**Grid-to-battery minimum flow:**
 
+$$
+E^{GB}_i \ge B_\text{charge}^{\max} \cdot c_i - E^{SB}_i \cdot 0.9, \quad \forall i \in I
+$$
+
+### 5. Binary Control Constraints
 **No simultaneous charging and discharging:**
 
 $$
 c_i + x_i \le 1, \quad \forall i \in I
+$$
+
+**No simultaneous import and export:**
+
+$$
+m_i + y_i \le 1, \quad \forall i \in I
 $$
 
 **Grid import control (Big-M constraint):**
@@ -100,42 +136,13 @@ $$
 E^S_i \le M \cdot y_i, \quad \forall i \in I
 $$
 
-**No simultaneous import and export:**
-
-$$
-m_i + y_i \le 1, \quad \forall i \in I
-$$
-
 **Binary variable definitions:**
 
 $$
 c_i, x_i, m_i, y_i \in \{0,1\}, \quad \forall i \in I
 $$
 
-### Battery Discharge Constraint
-
-**Battery discharging limit:**
-
-$$
-E^D_i \le B_\text{discharge}^{\max} \cdot x_i, \quad \forall i \in I
-$$
-
-### Battery State Dynamics
-
-**Initial battery state:**
-
-$$
-B_0 = B_{c,\mathrm{initial}} + E^C_0 - E^D_0
-$$
-
-**Battery state evolution:**
-
-$$
-B_i = B_{i-1} + E^C_i - E^D_i, \quad \forall i \in I \setminus \{0\}
-$$
-
-### Initial Energy Tracking
-
+### 6. Initial Energy Tracking
 **Initial energy at start:**
 
 $$
@@ -154,46 +161,18 @@ $$
 E^0_i \ge B_{c,\mathrm{initial}} - \sum_{j=0}^{i} E^D_j, \quad \forall i \in I
 $$
 
-### Energy Balance Constraints
-
-**Load energy balance:**
-
-$$
-C_i = E^{SL}_i + E^D_i + E^{GL}_i, \quad \forall i \in I
-$$
-
-**Solar energy balance:**
-
-$$
-S_i = E^{SB}_i + E^{SL}_i + E^S_i, \quad \forall i \in I
-$$
-
-### End-of-Period Energy Accounting
-
-**Bonus for remaining charge at end:**
-
-$$
-E^B = B_{I_{\max}} - E^0_{I_{\max}}
-$$
-
 **Used initial energy at each step:**
 
 $$
 E^U_i = B_{c,\mathrm{initial}} - E^0_i, \quad \forall i \in I
 $$
 
-### Objective Function Parameters
-
-**Minimum and average price:**
-
-$$
-P_{\min} = \min_{i \in I} P_i
-$$
+### 7. End-of-Period Accounting
+**Bonus for remaining charge at end:**
 
 $$
-P_{\text{avg}} = \frac{1}{|I|} \sum_{i \in I} P_i
+E^B = B_{I_{\max}} - E^0_{I_{\max}}
 $$
----
 
 ## Project Structure
 
