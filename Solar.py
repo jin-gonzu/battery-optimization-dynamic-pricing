@@ -7,35 +7,34 @@ import numpy as np
 import re
 from example import exampleData
 
+from batteryCommands.sma import generate_commands
+from batteryCommands.sma import group_commands
+from batteryCommands.sma import format_command_schedule
+
 interval = list(range(96))
 
 def group_commands(commands):
     grouped_commands = []
     sorted_intervals = sorted(commands.keys())
-
     if not sorted_intervals:
         return grouped_commands
-
     current_cmd = commands[sorted_intervals[0]]
     start = sorted_intervals[0]
-
     for i in sorted_intervals[1:]:
         if commands[i] != current_cmd:
             grouped_commands.append({
                 'cmd': current_cmd,
                 'p1': start,
-                'p2': i - 1
+                'p2': i  # i ist die erste Periode mit neuem Befehl
             })
             current_cmd = commands[i]
             start = i
-
     # letztes Intervall hinzufügen
     grouped_commands.append({
         'cmd': current_cmd,
         'p1': start,
-        'p2': sorted_intervals[-1]
+        'p2': sorted_intervals[-1] + 1  # +1 für exklusives Ende
     })
-
     return grouped_commands
 
 def readData(filename, length):
@@ -86,10 +85,9 @@ values_pv = readData(folderName+"/pv.log", len(interval))
 
 #energyConsumption, values_pv, values_kosten, interval = exampleData()
 
-#battery_soc_initial = 70;
 battery_soc_target = 35;
 
-battery_soc_minimum_allowed = 20
+battery_soc_minimum_allowed = 35
 
 battery_max_capacity=28800
 battery_initial_capacity = int(battery_soc_initial * battery_max_capacity / 100)
@@ -279,29 +277,26 @@ plt.tight_layout(rect=[0, 0.08, 1, 1])
 #plt.show()
 plt.savefig(folderName+"\\" + folderName + ".png", dpi=300, bbox_inches='tight')
 
-# befehle
-commands = {}
-for i in interval:
-    #in case the battery would be discharged
-    if is_discharging_list[i] == 1 and battery_discharge_list[i] > 0:
-        commands[i] = "DIS"
-    #as soon as outside energy is used to load the battery
-    # regardless of input from the solar pv
-    elif(outside_to_battery_list[i] > 0 and is_charging_list[i] == 1):
-        commands[i] = "ACC"
+# Generate commands
+commands = generate_commands(
+    interval, is_discharging_list, battery_discharge_list,
+    is_charging_list, outside_to_battery_list, solar_to_battery_list
+)
 
-    elif(is_discharging_list[i] == 0 and is_charging_list[i] == 1 and outside_to_battery_list[i] == 0 and solar_to_battery_list[i] > 0):
-        commands[i] = "NOD"
-    elif(is_discharging_list[i] == 0 and is_charging_list[i] == 0):
-        commands[i] = "NOD"
-    elif(is_discharging_list[i] == 1 and battery_discharge_list[i] == 0):
-        commands[i] = "NOD"
-    else:
-        commands[i] = "TEST"
-
+print("Individual Commands:")
+for i, cmd in commands.items():
+    print(f"Period {i}: {cmd}")
+    
+print("\n" + "=" * 50 + "\n")
+    
+# Group commands
 grouped = group_commands(commands)
     
-
-for g in grouped:
-    print(g)
-#print(commands)
+print("Grouped Commands:")
+for group in grouped:
+    print(group)
+    
+print("\n" + "=" * 50 + "\n")
+    
+# Format schedule
+print(format_command_schedule(grouped))
