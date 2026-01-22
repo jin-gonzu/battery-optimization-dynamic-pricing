@@ -46,6 +46,14 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 | $m_i$ | 1 if energy import at step $i$ | $\{0,1\}$ |
 | $y_i$ | 1 if energy export at step $i$ | $\{0,1\}$ |
 
+### Objective Function
+
+**Minimize total cost:**
+
+$$
+\min \quad Z = \sum_{i \in I} \left( P_i \cdot E^G_i - P_{\mathrm{solar}} \cdot E^S_i \right) - P_{\mathrm{loaded}} \cdot B_{c,\mathrm{initial}} + P_{\mathrm{loaded}} \cdot B_{I_{\max}}
+$$
+
 ### Energy Flow and Charging Constraints
 
 **Battery charging limit:**
