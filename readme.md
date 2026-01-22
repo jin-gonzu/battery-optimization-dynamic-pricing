@@ -63,6 +63,7 @@ C_i = E^{SL}_i + E^D_i + E^{GL}_i, \quad \forall i \in I
 $$
 
 **Solar energy balance:**
+
 $$
 S_i = E^{SB}_i + E^{SL}_i + E^S_i, \quad \forall i \in I
 $$
