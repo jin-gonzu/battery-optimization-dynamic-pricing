@@ -38,7 +38,7 @@ It schedules battery usage to minimize energy costs, can avoid switching, and re
 | **Initial Energy Variables** | | |
 | $E^U_i$ | Used initial energy at step $i$ | $E^U_i \in [0,B_{c,\mathrm{initial}}]$ |
 | $E^0_i$ | Remaining initial energy at step $i$ | $E^0_i \in [0,B_{c,\mathrm{initial}}]$ |
-| $E^B_i$ | Bonus for remaining charge at end of step $i$ | $E^B_i \in [-\infty,\infty]$ |
+| $E^B$ | Bonus for remaining charge at the last step | $E^B \in [-\infty,\infty]$ |
 | **Binary Control Variables** | | |
 | $d_i$ | 1 if discharge allowed at step $i$ | $\{0,1\}$ |
 | $c_i$ | 1 if charging at step $i$ | $\{0,1\}$ |
