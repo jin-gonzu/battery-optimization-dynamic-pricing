@@ -143,7 +143,7 @@ $$
 
 The objective function creates a balance between purchased energy and battery charging by pricing not only the purchased energy but also the charged (or discharged) energy from the battery. This mechanism ensures economically optimal battery usage based on dynamic electricity prices.
 
-The term $P_{\mathrm{loaded}} \cdot (B_{I_{\max}} - B_{c,\mathrm{initial}})$ represents the value change of energy stored in the battery over the optimization period. By valuing battery energy at $P_{\mathrm{loaded}}$, the optimizer compares the cost of grid energy at each time step against the opportunity cost of using battery energy.
+The term $P_{\mathrm{loaded}} \cdot B_{I_{\max}}$ represents the value change of energy stored in the battery over the optimization period. By valuing battery energy at $P_{\mathrm{loaded}}$, the optimizer compares the cost of grid energy at each time step against the opportunity cost of using battery energy.
 
 **Behavioral Analysis:**
 
